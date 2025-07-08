@@ -2,6 +2,12 @@ name: Build
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag for artifacts
+        type: string
+        required: false
+        default: latest
 
   push:
     branches:
@@ -26,4 +32,5 @@ jobs:
       - name: Build
         uses: ./.github/actions/build-stac-browser
         with:
+          tag: ${{ env.TAG }}
           upload: ${{ github.event_name != 'pull_request' }}

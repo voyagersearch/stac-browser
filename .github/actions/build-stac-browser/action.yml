@@ -2,6 +2,9 @@ name: Build STAC Browser UI
 description: Builds Voyager STAC Browser UI
 
 inputs:
+  tag:
+    description: Tag for artifacts
+    required: true
   upload:
     description: Where to upload artifacts
     required: true
@@ -44,5 +47,6 @@ runs:
       with:
         folder: apps/stac
         name: STAC Browser
+        tag: ${{inputs.tag}}
         arch: any
         include: stac.zip
