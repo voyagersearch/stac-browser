@@ -21,6 +21,7 @@ env:
   AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
   AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
   TAG: ${{ inputs.tag || 'latest' }}
+  ACTIONS_STEP_DEBUG: true
 
 jobs:
   build:
@@ -29,6 +30,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: List local actions
+        run: ls -R .github/actions || echo "No local actions found"
 
       - name: Build
         uses: ./.github/actions/build-stac-browser
