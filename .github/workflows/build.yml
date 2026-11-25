@@ -8,6 +8,30 @@ on:
         type: string
         required: false
         default: latest
+      ref:
+        description: Git ref to build from
+        type: string
+        required: false
+        default: v3.3.5_vg
+
+  workflow_call:
+    inputs:
+      tag:
+        description: Tag for artifacts
+        type: string
+        default: latest
+      ref:
+        description: Git ref to build from
+        type: string
+        required: false
+        default: v3.3.5_vg
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      ACCESS_TOKEN:
+        required: true
 
   push:
     branches:
@@ -18,9 +42,10 @@ on:
       - v3.3.5_vg
 
 env:
-  AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
-  AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-  TAG: ${{ inputs.tag || 'latest' }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  TAG: ${{ github.event.inputs.tag || inputs.tag || 'latest' }}
+  REF: ${{ github.event.inputs.ref || inputs.ref || github.sha }}
 
 jobs:
   build:
@@ -29,9 +54,45 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          repository: voyagersearch/stac-browser
+          ref: ${{ env.REF }}
+          token: ${{ secrets.ACCESS_TOKEN || github.token }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install
+        shell: bash
+        run: npm install --legacy-peer-deps
 
       - name: Build
-        uses: ./.github/actions/build-stac-browser
+        shell: bash
+        run: npm run build -- --pathPrefix="/stac/" --historyMode=hash
+
+      - name: Delete dist/config.js
+        shell: bash
+        run: |
+          if [ -f dist/config.js ]; then
+            rm dist/config.js
+            echo "config.js removed from dist/"
+          else
+            echo "config.js not found in dist/"
+          fi
+
+      - name: Dist
+        if: ${{ github.event_name != 'pull_request' }}
+        shell: bash
+        working-directory: ./dist
+        run: zip -r ../stac-ui.zip .
+
+      - name: Upload
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: voyagersearch/s3-upload-action@v13
         with:
+          folder: apps/hq
+          title: STAC UI
           tag: ${{ env.TAG }}
-          upload: ${{ github.event_name != 'pull_request' }}
+          include: stac-ui.zip

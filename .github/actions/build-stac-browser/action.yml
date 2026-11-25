@@ -1,12 +1,15 @@
 name: Build STAC Browser UI
-description: Builds Voyager STAC Browser UI
+description: >
+  Builds the Voyager STAC Browser UI and publishes stac-ui.zip for the HQ bundle.
+  Release builds run the same steps from .github/workflows/build.yml so a version-tag
+  checkout still uploads into apps/hq.
 
 inputs:
   tag:
     description: Tag for artifacts
     required: true
   upload:
-    description: Where to upload artifacts
+    description: Upload the built UI to the HQ app artifacts
     required: true
 
 runs:
@@ -15,7 +18,7 @@ runs:
     - name: Setup Node
       uses: actions/setup-node@v4
       with:
-        node-version: 'lts/*'
+        node-version: '20'
 
     - name: Install
       shell: bash
@@ -35,18 +38,19 @@ runs:
           echo "config.js not found in dist/"
         fi
 
+    # HQ serves config.js itself. The zip name must be stac-ui.zip under apps/hq
+    # so the Voyager bundle can unpack it next to the other HQ web apps.
     - name: Dist
       shell: bash
       if: ${{ inputs.upload == 'true' }}
-      run: zip -r ../stac.zip .
+      run: zip -r ../stac-ui.zip .
       working-directory: ./dist
 
     - name: Upload
-      uses: voyagersearch/s3-upload-action@v8
+      uses: voyagersearch/s3-upload-action@v13
       if: ${{ inputs.upload == 'true' }}
       with:
-        folder: apps/stac
-        name: STAC Browser
-        tag: ${{inputs.tag}}
-        arch: any
-        include: stac.zip
+        folder: apps/hq
+        title: STAC UI
+        tag: ${{ inputs.tag }}
+        include: stac-ui.zip
